@@ -1,0 +1,290 @@
+!DOCTYPE html
+html lang=it
+head
+    meta charset=UTF-8
+    meta name=viewport content=width=device-width, initial-scale=1.0
+    titleScacchi - Edizione Legnotitle
+    style
+        body {
+            font-family 'Arial', sans-serif;
+            background-color #f4f4f9;
+            display flex;
+            flex-direction column;
+            align-items center;
+            justify-content center;
+            margin 0;
+            padding 20px;
+        }
+
+        h1 {
+            margin-bottom 5px;
+            font-size 24px;
+            color #2c2c2c;
+        }
+
+        #label-turno {
+            font-size 18px;
+            font-weight bold;
+            margin-bottom 10px;
+            text-transform uppercase;
+        }
+
+         Scacchiera 
+        #scacchiera-container {
+            position relative;
+            box-shadow 0 8px 16px rgba(0,0,0,0.2);
+            border 4px solid #b58863;
+        }
+
+        canvas {
+            display block;
+            cursor pointer;
+        }
+
+         Sezione Momentum 
+        #frame-momentum {
+            margin-top 15px;
+            text-align center;
+            width 400px;
+        }
+
+        #label-momentum {
+            font-size 14px;
+            font-weight bold;
+            margin-bottom 5px;
+        }
+
+        #canvas-momentum {
+            width 100%;
+            height 20px;
+            background-color #CCCCCC;
+            border 1px solid black;
+            display flex;
+            overflow hidden;
+        }
+
+        #rett-bianco {
+            height 100%;
+            background-color #F0D9B5;
+            transition width 0.3s ease;
+        }
+
+        #rett-nero {
+            height 100%;
+            background-color #B58863;
+            flex-grow 1;
+            transition width 0.3s ease;
+        }
+
+         Pezzi Mangiati 
+        #frame-mangiati {
+            margin-top 15px;
+            width 100%;
+            max-width 500px;
+            display flex;
+            flex-direction column;
+            gap 5px;
+            background white;
+            padding 10px;
+            border-radius 8px;
+            box-shadow 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .label-mangiati {
+            font-size 15px;
+            color #2c2c2c;
+        }
+    style
+head
+body
+
+    h1Scacchi - Edizione Legnoh1
+    div id=label-turnoTurno BIANCOdiv
+
+    div id=scacchiera-container
+        canvas id=scacchiera width=600 height=600canvas
+    div
+
+    div id=frame-momentum
+        div id=label-momentumBianco 39    Nero 39div
+        div id=canvas-momentum
+            div id=rett-bianco style=width 50%;div
+            div id=rett-nerodiv
+        div
+    div
+
+    div id=frame-mangiati
+        div id=label-mangiati-bianchi class=label-mangiatiMangiati dal Bianco div
+        div id=label-mangiati-neri class=label-mangiatiMangiati dal Nero div
+    div
+
+    script
+         Costanti di gioco
+        const DIMENSIONE = 600;
+        const RIGHE = 8;
+        const COLONNE = 8;
+        const DIM_CASELLA = DIMENSIONE  COLONNE;
+
+        const LEGNO_CHIARO = #F0D9B5;
+        const LEGNO_SCURO = #B58863;
+        const COLORE_BIANCO_PEZZO = #2C2C2C;
+        const COLORE_NERO_PEZZO = #000000;
+        const EVIDENZIA_SELEZIONE = #FF3333;
+
+        const UNICODE_PEZZI = {
+            'BR' '♔', 'BQ' '♕', 'BT' '♖', 'BA' '♗', 'BC' '♘', 'BP' '♙',
+            'NR' '♚', 'NQ' '♛', 'NT' '♜', 'NA' '♝', 'NC' '♞', 'NP' '♟'
+        };
+
+        const VALORI_PEZZI = {'P' 1, 'C' 3, 'A' 3, 'T' 5, 'Q' 9, 'R' 0};
+
+         Classi dei pezzi
+        class Pezzo {
+            constructor(colore, tipo) {
+                this.colore = colore;
+                this.tipo = tipo;
+                this.simbolo = UNICODE_PEZZI[`${colore}${tipo}`];
+                this.has_moved = false;
+            }
+
+            ottieniColoreGrafico(isSelected) {
+                if (isSelected) return EVIDENZIA_SELEZIONE;
+                return this.colore === 'B'  COLORE_BIANCO_PEZZO  COLORE_NERO_PEZZO;
+            }
+
+            coloreDestinazioneOk(r_a, c_a, griglia) {
+                let pezzo = griglia[r_a][c_a];
+                return pezzo === null  pezzo.colore !== this.colore;
+            }
+
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return false;
+            }
+
+            controlloLineaDritta(r_p, c_p, r_a, c_a, griglia) {
+                if (r_p !== r_a && c_p !== c_a) return false;
+                let step_r = r_p === r_a  0  (r_a  r_p  1  -1);
+                let step_c = c_p === c_a  0  (c_a  c_p  1  -1);
+                let curr_r = r_p + step_r;
+                let curr_c = c_p + step_c;
+                while (curr_r !== r_a  curr_c !== c_a) {
+                    if (griglia[curr_r][curr_c] !== null) return false;
+                    curr_r += step_r;
+                    curr_c += step_c;
+                }
+                return true;
+            }
+
+            controlloDiagonale(r_p, c_p, r_a, c_a, griglia) {
+                if (Math.abs(r_a - r_p) !== Math.abs(c_a - c_p)) return false;
+                let step_r = r_a  r_p  1  -1;
+                let step_c = c_a  c_p  1  -1;
+                let curr_r = r_p + step_r;
+                let curr_c = c_p + step_c;
+                while (curr_r !== r_a && curr_c !== c_a) {
+                    if (griglia[curr_r][curr_c] !== null) return false;
+                    curr_r += step_r;
+                    curr_c += step_c;
+                }
+                return true;
+            }
+        }
+
+        class Pedone extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                if (!this.coloreDestinazioneOk(r_a, c_a, griglia)) return false;
+                let direzione = this.colore === 'B'  -1  1;
+                let rigaIniziale = this.colore === 'B'  6  1;
+                let pezzoArrivo = griglia[r_a][c_a];
+
+                if (c_p === c_a && r_a === r_p + direzione && pezzoArrivo === null) return true;
+                if (c_p === c_a && r_p === rigaIniziale && r_a === r_p + 2  direzione) {
+                    if (griglia[r_p + direzione][c_p] === null && pezzoArrivo === null) return true;
+                }
+                if (Math.abs(c_a - c_p) === 1 && r_a === r_p + direzione && pezzoArrivo !== null) return true;
+                return false;
+            }
+        }
+
+        class Torre extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return this.coloreDestinazioneOk(r_a, c_a, griglia) && this.controlloLineaDritta(r_p, c_p, r_a, c_a, griglia);
+            }
+        }
+
+        class Alfiere extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return this.coloreDestinazioneOk(r_a, c_a, griglia) && this.controlloDiagonale(r_p, c_p, r_a, c_a, griglia);
+            }
+        }
+
+        class Cavallo extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return this.coloreDestinazioneOk(r_a, c_a, griglia) && (
+                    (Math.abs(r_a - r_p) === 2 && Math.abs(c_a - c_p) === 1) 
+                    (Math.abs(r_a - r_p) === 1 && Math.abs(c_a - c_p) === 2)
+                );
+            }
+        }
+
+        class Regina extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return this.coloreDestinazioneOk(r_a, c_a, griglia) && (
+                    this.controlloLineaDritta(r_p, c_p, r_a, c_a, griglia) 
+                    this.controlloDiagonale(r_p, c_p, r_a, c_a, griglia)
+                );
+            }
+        }
+
+        class Re extends Pezzo {
+            mossaValida(r_p, c_p, r_a, c_a, griglia) {
+                return this.coloreDestinazioneOk(r_a, c_a, griglia) &&
+                       Math.abs(r_a - r_p) = 1 && Math.abs(c_a - c_p) = 1 &&
+                       (r_a !== r_p  c_a !== c_p);
+            }
+        }
+
+        class Scacchiera {
+            constructor() {
+                this.griglia = Array(RIGHE).fill(null).map(() = Array(COLONNE).fill(null));
+                this.inizializzaPezzi();
+            }
+
+            inizializzaPezzi() {
+                for (let col = 0; col  COLONNE; col++) {
+                    this.griglia[1][col] = new Pedone('N', 'P');
+                    this.griglia[6][col] = new Pedone('B', 'P');
+                }
+                this.griglia[0][0] = new Torre('N', 'T');
+                this.griglia[0][1] = new Cavallo('N', 'C');
+                this.griglia[0][2] = new Alfiere('N', 'A');
+                this.griglia[0][3] = new Regina('N', 'Q');
+                this.griglia[0][4] = new Re('N', 'R');
+                this.griglia[0][5] = new Alfiere('N', 'A');
+                this.griglia[0][6] = new Cavallo('N', 'C');
+                this.griglia[0][7] = new Torre('N', 'T');
+
+                this.griglia[7][0] = new Torre('B', 'T');
+                this.griglia[7][1] = new Cavallo('B', 'C');
+                this.griglia[7][2] = new Alfiere('B', 'A');
+                this.griglia[7][3] = new Regina('B', 'Q');
+                this.griglia[7][4] = new Re('B', 'R');
+                this.griglia[7][5] = new Alfiere('B', 'A');
+                this.griglia[7][6] = new Cavallo('B', 'C');
+                this.griglia[7][7] = new Torre('B', 'T');
+            }
+
+            trovaRe(colore) {
+                for (let r = 0; r  RIGHE; r++) {
+                    for (let c = 0; c  COLONNE; c++) {
+                        let p = this.griglia[r][c];
+                        if (p !== null && p.tipo === 'R' && p.colore === colore) {
+                            return [r, c];
+                        }
+                    }
+                }
+                return null;
+            }
+
+            subisceScacco(colore) {
+                let posRe = this.trovaRe(colore);
