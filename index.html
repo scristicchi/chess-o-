@@ -1,290 +1,840 @@
-!DOCTYPE html
-html lang=it
-head
-    meta charset=UTF-8
-    meta name=viewport content=width=device-width, initial-scale=1.0
-    titleScacchi - Edizione Legnotitle
-    style
-        body {
-            font-family 'Arial', sans-serif;
-            background-color #f4f4f9;
-            display flex;
-            flex-direction column;
-            align-items center;
-            justify-content center;
-            margin 0;
-            padding 20px;
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scacchi — Edizione Legno</title>
+<style>
+  :root {
+    --legno-chiaro: #F0D9B5;
+    --legno-scuro: #B58863;
+    --bg: #2b2320;
+    --pannello: #3c322c;
+    --testo: #eee3d3;
+    --accento: #d97757;
+    --evidenzia: #ff3333;
+    --mossa-possibile: rgba(60, 160, 60, 0.55);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #3a2f28 0%, #201a16 70%);
+    color: var(--testo);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 48px;
+  }
+  h1 {
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    font-size: 1.6rem;
+    margin: 0 0 4px;
+    color: var(--testo);
+  }
+  .sottotitolo {
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accento);
+    margin-bottom: 20px;
+  }
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .colonna-centrale {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .controlli {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  button {
+    font-family: inherit;
+    background: var(--pannello);
+    color: var(--testo);
+    border: 1px solid #5a4c40;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover {
+    background: #4a3e35;
+    border-color: var(--accento);
+  }
+  #turno {
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    min-height: 1.2em;
+  }
+  #turno.scacco { color: var(--evidenzia); font-weight: bold; }
+  canvas#scacchiera {
+    border: 6px solid #23180f;
+    border-radius: 2px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+    touch-action: none;
+  }
+  .momentum-wrap {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 16px;
+  }
+  .momentum-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    color: #cbbfae;
+  }
+  #barra-momentum {
+    display: flex;
+    height: 18px;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid #5a4c40;
+  }
+  #seg-bianco { background: var(--legno-chiaro); transition: width 0.3s; }
+  #seg-nero { background: var(--legno-scuro); transition: width 0.3s; }
+
+  .mangiati {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    font-size: 1.1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mangiati-blocco {
+    background: var(--pannello);
+    border: 1px solid #5a4c40;
+    border-radius: 6px;
+    padding: 8px 14px;
+    min-width: 180px;
+    text-align: center;
+  }
+  .mangiati-blocco .titolo {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accento);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .pannello-laterale {
+    width: 220px;
+    background: var(--pannello);
+    border: 1px solid #5a4c40;
+    border-radius: 6px;
+    padding: 14px;
+    max-height: 620px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pannello-laterale h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accento);
+    margin: 0 0 10px;
+    font-weight: 400;
+    border-bottom: 1px solid #5a4c40;
+    padding-bottom: 8px;
+  }
+  #lista-mosse {
+    overflow-y: auto;
+    flex: 1;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  .riga-mossa {
+    display: flex;
+    gap: 8px;
+  }
+  .riga-mossa .num { color: #8a7a68; width: 22px; }
+  .riga-mossa .b, .riga-mossa .n { flex: 1; }
+
+  .promozione-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .promozione-overlay.attivo { display: flex; }
+  .promozione-box {
+    background: var(--pannello);
+    border: 1px solid var(--accento);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    gap: 12px;
+  }
+  .promozione-box button {
+    font-size: 2rem;
+    padding: 10px 16px;
+    background: var(--legno-chiaro);
+    color: #222;
+  }
+  .promozione-box button:hover { background: var(--accento); color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Scacchi</h1>
+<div class="sottotitolo">Edizione Legno</div>
+
+<div class="layout">
+  <div class="colonna-centrale">
+    <div class="controlli">
+      <button id="btn-nuova">🔄 Nuova Partita</button>
+      <button id="btn-cronologia">📜 Vai a inizio</button>
+    </div>
+    <div id="turno">Turno: Bianco</div>
+    <canvas id="scacchiera" width="600" height="600"></canvas>
+
+    <div class="momentum-wrap">
+      <div class="momentum-label">
+        <span id="val-bianco">Bianco: 39</span>
+        <span id="val-nero">Nero: 39</span>
+      </div>
+      <div id="barra-momentum">
+        <div id="seg-bianco" style="width:50%"></div>
+        <div id="seg-nero" style="width:50%"></div>
+      </div>
+    </div>
+
+    <div class="mangiati">
+      <div class="mangiati-blocco">
+        <span class="titolo">Mangiati dal Bianco</span>
+        <span id="mangiati-bianco">—</span>
+      </div>
+      <div class="mangiati-blocco">
+        <span class="titolo">Mangiati dal Nero</span>
+        <span id="mangiati-nero">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pannello-laterale">
+    <h2>Cronologia mosse</h2>
+    <div id="lista-mosse"></div>
+  </div>
+</div>
+
+<div class="promozione-overlay" id="overlay-promozione">
+  <div class="promozione-box" id="box-promozione"></div>
+</div>
+
+<script>
+(function () {
+  const DIM = 600, RIGHE = 8, COLONNE = 8, CASELLA = DIM / COLONNE;
+  const LEGNO_CHIARO = "#F0D9B5", LEGNO_SCURO = "#B58863";
+  const COLORE_BIANCO_PEZZO = "#F5F1EA", COLORE_NERO_PEZZO = "#141414";
+  const EVIDENZIA = "#FF3333";
+  const MOSSA_POSSIBILE = "rgba(60,160,60,0.55)";
+
+  const UNICODE = {
+    BR: '♔', BQ: '♕', BT: '♖', BA: '♗', BC: '♘', BP: '♙',
+    NR: '♚', NQ: '♛', NT: '♜', NA: '♝', NC: '♞', NP: '♟'
+  };
+  const VALORI = { P: 1, C: 3, A: 3, T: 5, Q: 9, R: 0 };
+  const NOMI_ITA = { P: 'Pedone', C: 'Cavallo', A: 'Alfiere', T: 'Torre', Q: 'Regina', R: 'Re' };
+
+  // ---------- Pezzo ----------
+  class Pezzo {
+    constructor(colore, tipo) {
+      this.colore = colore; // 'B' | 'N'
+      this.tipo = tipo;     // 'P','T','A','C','Q','R'
+      this.simbolo = UNICODE[colore + tipo];
+      this.hasMoved = false;
+    }
+    coloreDestOk(rA, cA, griglia) {
+      const p = griglia[rA][cA];
+      return p === null || p.colore !== this.colore;
+    }
+    mossaValida() { return false; }
+    controlloLineaDritta(rP, cP, rA, cA, griglia) {
+      if (rP !== rA && cP !== cA) return false;
+      const stepR = rP === rA ? 0 : (rA > rP ? 1 : -1);
+      const stepC = cP === cA ? 0 : (cA > cP ? 1 : -1);
+      let cr = rP + stepR, cc = cP + stepC;
+      while (cr !== rA || cc !== cA) {
+        if (griglia[cr][cc] !== null) return false;
+        cr += stepR; cc += stepC;
+      }
+      return true;
+    }
+    controlloDiagonale(rP, cP, rA, cA, griglia) {
+      if (Math.abs(rA - rP) !== Math.abs(cA - cP)) return false;
+      const stepR = rA > rP ? 1 : -1;
+      const stepC = cA > cP ? 1 : -1;
+      let cr = rP + stepR, cc = cP + stepC;
+      while (cr !== rA && cc !== cA) {
+        if (griglia[cr][cc] !== null) return false;
+        cr += stepR; cc += stepC;
+      }
+      return true;
+    }
+  }
+
+  class Pedone extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      if (!this.coloreDestOk(rA, cA, griglia)) return false;
+      const dir = this.colore === 'B' ? -1 : 1;
+      const rigaIniziale = this.colore === 'B' ? 6 : 1;
+      const dest = griglia[rA][cA];
+      if (cP === cA && rA === rP + dir && dest === null) return true;
+      if (cP === cA && rP === rigaIniziale && rA === rP + 2 * dir) {
+        if (griglia[rP + dir][cP] === null && dest === null) return true;
+      }
+      if (Math.abs(cA - cP) === 1 && rA === rP + dir && dest !== null) return true;
+      return false;
+    }
+  }
+  class Torre extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      return this.coloreDestOk(rA, cA, griglia) && this.controlloLineaDritta(rP, cP, rA, cA, griglia);
+    }
+  }
+  class Alfiere extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      return this.coloreDestOk(rA, cA, griglia) && this.controlloDiagonale(rP, cP, rA, cA, griglia);
+    }
+  }
+  class Cavallo extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      if (!this.coloreDestOk(rA, cA, griglia)) return false;
+      const dr = Math.abs(rA - rP), dc = Math.abs(cA - cP);
+      return (dr === 2 && dc === 1) || (dr === 1 && dc === 2);
+    }
+  }
+  class Regina extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      return this.coloreDestOk(rA, cA, griglia) &&
+        (this.controlloLineaDritta(rP, cP, rA, cA, griglia) || this.controlloDiagonale(rP, cP, rA, cA, griglia));
+    }
+  }
+  class Re extends Pezzo {
+    mossaValida(rP, cP, rA, cA, griglia) {
+      return this.coloreDestOk(rA, cA, griglia) &&
+        Math.abs(rA - rP) <= 1 && Math.abs(cA - cP) <= 1 &&
+        (rA !== rP || cA !== cP);
+    }
+  }
+
+  function nuovaGriglia() {
+    const g = Array.from({ length: RIGHE }, () => Array(COLONNE).fill(null));
+    for (let col = 0; col < COLONNE; col++) {
+      g[1][col] = new Pedone('N', 'P');
+      g[6][col] = new Pedone('B', 'P');
+    }
+    const ordine = ['T', 'C', 'A', 'Q', 'R', 'A', 'C', 'T'];
+    for (let col = 0; col < COLONNE; col++) {
+      g[0][col] = new (classeDiTipo(ordine[col]))('N', ordine[col]);
+      g[7][col] = new (classeDiTipo(ordine[col]))('B', ordine[col]);
+    }
+    return g;
+  }
+  function classeDiTipo(t) {
+    return { T: Torre, C: Cavallo, A: Alfiere, Q: Regina, R: Re }[t];
+  }
+
+  function trovaRe(griglia, colore) {
+    for (let r = 0; r < RIGHE; r++)
+      for (let c = 0; c < COLONNE; c++) {
+        const p = griglia[r][c];
+        if (p && p.tipo === 'R' && p.colore === colore) return [r, c];
+      }
+    return null;
+  }
+  function casellaSottoAttacco(griglia, r, c, coloreAttaccante) {
+    for (let rr = 0; rr < RIGHE; rr++)
+      for (let cc = 0; cc < COLONNE; cc++) {
+        const p = griglia[rr][cc];
+        if (p && p.colore === coloreAttaccante) {
+          if (p.tipo === 'P') {
+            const dir = p.colore === 'B' ? -1 : 1;
+            if (r === rr + dir && Math.abs(c - cc) === 1) return true;
+          } else if (p.mossaValida(rr, cc, r, c, griglia)) {
+            return true;
+          }
         }
+      }
+    return false;
+  }
+  function subisceScacco(griglia, colore) {
+    const pos = trovaRe(griglia, colore);
+    if (!pos) return false;
+    const avv = colore === 'B' ? 'N' : 'B';
+    return casellaSottoAttacco(griglia, pos[0], pos[1], avv);
+  }
 
-        h1 {
-            margin-bottom 5px;
-            font-size 24px;
-            color #2c2c2c;
+  // ---------- Stato di gioco ----------
+  let griglia = nuovaGriglia();
+  let turno = 'B';
+  let selezione = null;      // [r,c]
+  let mosseValidePerSel = []; // lista di [r,c]
+  let numeroMossa = 0;
+  let storiaMosse = [];      // { numero, notazione, turno }
+  let mangiatiDalBianco = [];
+  let mangiatiDalNero = [];
+  let trascinamento = null;  // { r,c, pezzo, mouseX, mouseY }
+  let gioFinito = false;
+
+  const canvas = document.getElementById('scacchiera');
+  const ctx = canvas.getContext('2d');
+
+  function coloreDestGraph(pezzo, selezionato) {
+    if (selezionato) return EVIDENZIA;
+    return pezzo.colore === 'B' ? COLORE_BIANCO_PEZZO : COLORE_NERO_PEZZO;
+  }
+
+  function disegna() {
+    for (let r = 0; r < RIGHE; r++) {
+      for (let c = 0; c < COLONNE; c++) {
+        const chiaro = (r + c) % 2 === 0;
+        ctx.fillStyle = chiaro ? LEGNO_CHIARO : LEGNO_SCURO;
+        ctx.fillRect(c * CASELLA, r * CASELLA, CASELLA, CASELLA);
+      }
+    }
+    // evidenzia selezione
+    if (selezione) {
+      const [sr, sc] = selezione;
+      ctx.fillStyle = "rgba(255,51,51,0.35)";
+      ctx.fillRect(sc * CASELLA, sr * CASELLA, CASELLA, CASELLA);
+    }
+    // mosse possibili
+    mosseValidePerSel.forEach(([r, c]) => {
+      ctx.beginPath();
+      ctx.fillStyle = MOSSA_POSSIBILE;
+      ctx.arc(c * CASELLA + CASELLA / 2, r * CASELLA + CASELLA / 2, CASELLA * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // re sotto scacco
+    if (!gioFinito) {
+      const posRe = trovaRe(griglia, turno);
+      if (posRe && subisceScacco(griglia, turno)) {
+        const [rr, rc] = posRe;
+        ctx.fillStyle = "rgba(255,0,0,0.35)";
+        ctx.fillRect(rc * CASELLA, rr * CASELLA, CASELLA, CASELLA);
+      }
+    }
+    // pezzi
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `${CASELLA * 0.72}px serif`;
+    for (let r = 0; r < RIGHE; r++) {
+      for (let c = 0; c < COLONNE; c++) {
+        if (trascinamento && trascinamento.r === r && trascinamento.c === c) continue;
+        const p = griglia[r][c];
+        if (p) {
+          const sel = selezione && selezione[0] === r && selezione[1] === c;
+          ctx.fillStyle = coloreDestGraph(p, sel);
+          ctx.fillText(p.simbolo, c * CASELLA + CASELLA / 2, r * CASELLA + CASELLA / 2 + 2);
         }
+      }
+    }
+    // pezzo trascinato sopra tutto, sotto il mouse
+    if (trascinamento) {
+      ctx.fillStyle = coloreDestGraph(trascinamento.pezzo, true);
+      ctx.fillText(trascinamento.pezzo.simbolo, trascinamento.mouseX, trascinamento.mouseY);
+    }
+  }
 
-        #label-turno {
-            font-size 18px;
-            font-weight bold;
-            margin-bottom 10px;
-            text-transform uppercase;
+  function aggiornaTestoTurno() {
+    const el = document.getElementById('turno');
+    if (gioFinito) return;
+    const nomeColore = turno === 'B' ? 'Bianco' : 'Nero';
+    const scacco = subisceScacco(griglia, turno);
+    el.textContent = scacco ? `Turno: ${nomeColore} — SOTTO SCACCO!` : `Turno: ${nomeColore}`;
+    el.classList.toggle('scacco', scacco);
+  }
+
+  function calcolaValoreMateriale(colore) {
+    let tot = 0;
+    for (let r = 0; r < RIGHE; r++)
+      for (let c = 0; c < COLONNE; c++) {
+        const p = griglia[r][c];
+        if (p && p.colore === colore) tot += VALORI[p.tipo] || 0;
+      }
+    return tot;
+  }
+  function aggiornaMomentum() {
+    const vb = calcolaValoreMateriale('B');
+    const vn = calcolaValoreMateriale('N');
+    const totale = vb + vn;
+    const pctB = totale === 0 ? 50 : (vb / totale) * 100;
+    document.getElementById('seg-bianco').style.width = pctB + '%';
+    document.getElementById('seg-nero').style.width = (100 - pctB) + '%';
+    document.getElementById('val-bianco').textContent = `Bianco: ${vb}`;
+    document.getElementById('val-nero').textContent = `Nero: ${vn}`;
+  }
+  function aggiornaMangiati() {
+    document.getElementById('mangiati-bianco').textContent =
+      mangiatiDalBianco.length ? mangiatiDalBianco.map(p => p.simbolo).join(' ') : '—';
+    document.getElementById('mangiati-nero').textContent =
+      mangiatiDalNero.length ? mangiatiDalNero.map(p => p.simbolo).join(' ') : '—';
+  }
+
+  function calcolaNotazione(pezzo, rP, cP, rA, cA, cattura, arrocco) {
+    const colonne = 'abcdefgh', righe = '87654321';
+    if (arrocco === 'corto') return 'O-O';
+    if (arrocco === 'lungo') return 'O-O-O';
+    let lettera = '';
+    if (pezzo.tipo === 'R') lettera = 'R';
+    else if (pezzo.tipo === 'Q') lettera = 'D';
+    else if (pezzo.tipo === 'T') lettera = 'T';
+    else if (pezzo.tipo === 'A') lettera = 'A';
+    else if (pezzo.tipo === 'C') lettera = 'C';
+    if (pezzo.tipo === 'P' && cattura) lettera = colonne[cP];
+    const sep = cattura ? 'x' : '';
+    return `${lettera}${sep}${colonne[cA]}${righe[rA]}`;
+  }
+
+  function aggiungiMossaStoria(notazione) {
+    storiaMosse.push({ numero: numeroMossa, notazione, turno });
+    renderStoria();
+  }
+  function renderStoria() {
+    const cont = document.getElementById('lista-mosse');
+    cont.innerHTML = '';
+    let coppie = [];
+    storiaMosse.forEach(m => {
+      if (m.turno === 'B') {
+        coppie.push({ num: m.numero, b: m.notazione, n: '' });
+      } else {
+        if (coppie.length && coppie[coppie.length - 1].n === '') {
+          coppie[coppie.length - 1].n = m.notazione;
+        } else {
+          coppie.push({ num: m.numero, b: '', n: m.notazione });
         }
+      }
+    });
+    coppie.forEach((cp, i) => {
+      const div = document.createElement('div');
+      div.className = 'riga-mossa';
+      div.innerHTML = `<span class="num">${i + 1}.</span><span class="b">${cp.b}</span><span class="n">${cp.n}</span>`;
+      cont.appendChild(div);
+    });
+    cont.scrollTop = cont.scrollHeight;
+  }
 
-         Scacchiera 
-        #scacchiera-container {
-            position relative;
-            box-shadow 0 8px 16px rgba(0,0,0,0.2);
-            border 4px solid #b58863;
+  // ---------- Arrocco ----------
+  function tentaArrocco(rP, cP, rA, cA) {
+    const pezzo = griglia[rP][cP];
+    if (!pezzo || pezzo.tipo !== 'R' || pezzo.hasMoved) return [false, null];
+    if (rP !== rA || Math.abs(cA - cP) !== 2) return [false, null];
+    const dir = cA > cP ? 1 : -1;
+    const colTorre = dir === 1 ? 7 : 0;
+    const cRePassaggio = cP + dir;
+    const cReArrivo = cP + 2 * dir;
+    if (cA !== cReArrivo) return [false, null];
+    const torre = griglia[rP][colTorre];
+    if (!torre || torre.tipo !== 'T' || torre.colore !== pezzo.colore || torre.hasMoved) return [false, null];
+    for (let c = Math.min(cP, colTorre) + 1; c < Math.max(cP, colTorre); c++) {
+      if (griglia[rP][c] !== null) return [false, null];
+    }
+    if (subisceScacco(griglia, pezzo.colore)) return [false, null];
+    const avv = pezzo.colore === 'B' ? 'N' : 'B';
+    if (casellaSottoAttacco(griglia, rP, cRePassaggio, avv)) return [false, null];
+    if (casellaSottoAttacco(griglia, rP, cReArrivo, avv)) return [false, null];
+
+    const tipo = dir === 1 ? 'corto' : 'lungo';
+    griglia[rA][cA] = pezzo;
+    griglia[rP][cP] = null;
+    pezzo.hasMoved = true;
+    griglia[rP][cRePassaggio] = torre;
+    griglia[rP][colTorre] = null;
+    torre.hasMoved = true;
+    return [true, tipo];
+  }
+
+  function passaTurno() {
+    turno = turno === 'B' ? 'N' : 'B';
+    aggiornaTestoTurno();
+    aggiornaMomentum();
+    controllaFinePartita();
+  }
+
+  function esistonoMossePerColore(colore) {
+    for (let r = 0; r < RIGHE; r++)
+      for (let c = 0; c < COLONNE; c++) {
+        const p = griglia[r][c];
+        if (p && p.colore === colore) {
+          const dest = mosseLegaliPer(r, c);
+          if (dest.length > 0) return true;
         }
+      }
+    return false;
+  }
+  function controllaFinePartita() {
+    if (gioFinito) return;
+    if (!esistonoMossePerColore(turno)) {
+      gioFinito = true;
+      const scacco = subisceScacco(griglia, turno);
+      const nomeColore = turno === 'B' ? 'Bianco' : 'Nero';
+      const el = document.getElementById('turno');
+      if (scacco) {
+        const vincitore = turno === 'B' ? 'Nero' : 'Bianco';
+        el.textContent = `Scacco matto! Vince il ${vincitore}`;
+      } else {
+        el.textContent = `Stallo — Patta`;
+      }
+      el.classList.add('scacco');
+    }
+  }
 
-        canvas {
-            display block;
-            cursor pointer;
+  // Ritorna la lista di mosse pseudo-legali (senza lasciare il proprio re sotto scacco) per il pezzo in r,c
+  function mosseLegaliPer(r, c) {
+    const pezzo = griglia[r][c];
+    if (!pezzo) return [];
+    const risultati = [];
+    for (let rA = 0; rA < RIGHE; rA++) {
+      for (let cA = 0; cA < COLONNE; cA++) {
+        if (rA === r && cA === c) continue;
+        let valida = false;
+        if (pezzo.tipo === 'R' && rA === r && Math.abs(cA - c) === 2) {
+          // simulazione arrocco: verifichiamo condizioni senza eseguirlo davvero
+          valida = puoArroccareVerso(r, c, rA, cA);
+        } else if (pezzo.mossaValida(r, c, rA, cA, griglia)) {
+          valida = true;
         }
-
-         Sezione Momentum 
-        #frame-momentum {
-            margin-top 15px;
-            text-align center;
-            width 400px;
+        if (valida && !lascerebeSottoScaccoSimulato(pezzo.tipo === 'R' && Math.abs(cA - c) === 2, r, c, rA, cA)) {
+          risultati.push([rA, cA]);
         }
+      }
+    }
+    return risultati;
+  }
 
-        #label-momentum {
-            font-size 14px;
-            font-weight bold;
-            margin-bottom 5px;
-        }
+  function puoArroccareVerso(rP, cP, rA, cA) {
+    const pezzo = griglia[rP][cP];
+    if (!pezzo || pezzo.tipo !== 'R' || pezzo.hasMoved) return false;
+    const dir = cA > cP ? 1 : -1;
+    const colTorre = dir === 1 ? 7 : 0;
+    const cRePassaggio = cP + dir;
+    const cReArrivo = cP + 2 * dir;
+    if (cA !== cReArrivo) return false;
+    const torre = griglia[rP][colTorre];
+    if (!torre || torre.tipo !== 'T' || torre.colore !== pezzo.colore || torre.hasMoved) return false;
+    for (let c = Math.min(cP, colTorre) + 1; c < Math.max(cP, colTorre); c++) {
+      if (griglia[rP][c] !== null) return false;
+    }
+    if (subisceScacco(griglia, pezzo.colore)) return false;
+    const avv = pezzo.colore === 'B' ? 'N' : 'B';
+    if (casellaSottoAttacco(griglia, rP, cRePassaggio, avv)) return false;
+    if (casellaSottoAttacco(griglia, rP, cReArrivo, avv)) return false;
+    return true;
+  }
 
-        #canvas-momentum {
-            width 100%;
-            height 20px;
-            background-color #CCCCCC;
-            border 1px solid black;
-            display flex;
-            overflow hidden;
-        }
+  function lascerebeSottoScaccoSimulato(isArrocco, rP, cP, rA, cA) {
+    if (isArrocco) return false; // già verificato dentro puoArroccareVerso
+    const pezzo = griglia[rP][cP];
+    const salvato = griglia[rA][cA];
+    griglia[rA][cA] = pezzo;
+    griglia[rP][cP] = null;
+    const risultato = subisceScacco(griglia, pezzo.colore);
+    griglia[rP][cP] = pezzo;
+    griglia[rA][cA] = salvato;
+    return risultato;
+  }
 
-        #rett-bianco {
-            height 100%;
-            background-color #F0D9B5;
-            transition width 0.3s ease;
-        }
+  function eseguiPromozione(pezzo, tipoScelto) {
+    pezzo.tipo = tipoScelto;
+    pezzo.simbolo = UNICODE[pezzo.colore + tipoScelto];
+  }
 
-        #rett-nero {
-            height 100%;
-            background-color #B58863;
-            flex-grow 1;
-            transition width 0.3s ease;
-        }
+  function mostraSceltaPromozione(pezzo, callback) {
+    const overlay = document.getElementById('overlay-promozione');
+    const box = document.getElementById('box-promozione');
+    box.innerHTML = '';
+    ['Q', 'T', 'A', 'C'].forEach(tipo => {
+      const btn = document.createElement('button');
+      btn.textContent = UNICODE[pezzo.colore + tipo];
+      btn.title = NOMI_ITA[tipo];
+      btn.onclick = () => {
+        overlay.classList.remove('attivo');
+        callback(tipo);
+      };
+      box.appendChild(btn);
+    });
+    overlay.classList.add('attivo');
+  }
 
-         Pezzi Mangiati 
-        #frame-mangiati {
-            margin-top 15px;
-            width 100%;
-            max-width 500px;
-            display flex;
-            flex-direction column;
-            gap 5px;
-            background white;
-            padding 10px;
-            border-radius 8px;
-            box-shadow 0 2px 4px rgba(0,0,0,0.05);
-        }
+  function provaMossa(rP, cP, rA, cA) {
+    if (gioFinito) return false;
+    const pezzoSel = griglia[rP][cP];
+    if (!pezzoSel || pezzoSel.colore !== turno) return false;
 
-        .label-mangiati {
-            font-size 15px;
-            color #2c2c2c;
-        }
-    style
-head
-body
+    // Arrocco
+    if (pezzoSel.tipo === 'R' && rA === rP && Math.abs(cA - cP) === 2) {
+      const [ok, tipoArrocco] = tentaArrocco(rP, cP, rA, cA);
+      if (ok) {
+        numeroMossa++;
+        const nota = calcolaNotazione(pezzoSel, rP, cP, rA, cA, false, tipoArrocco);
+        aggiungiMossaStoria(nota);
+        selezione = null; mosseValidePerSel = [];
+        disegna();
+        passaTurno();
+        return true;
+      }
+      return false;
+    }
 
-    h1Scacchi - Edizione Legnoh1
-    div id=label-turnoTurno BIANCOdiv
+    if (!pezzoSel.mossaValida(rP, cP, rA, cA, griglia)) return false;
 
-    div id=scacchiera-container
-        canvas id=scacchiera width=600 height=600canvas
-    div
+    const destSalvato = griglia[rA][cA];
+    const cattura = destSalvato !== null;
 
-    div id=frame-momentum
-        div id=label-momentumBianco 39    Nero 39div
-        div id=canvas-momentum
-            div id=rett-bianco style=width 50%;div
-            div id=rett-nerodiv
-        div
-    div
+    griglia[rA][cA] = pezzoSel;
+    griglia[rP][cP] = null;
 
-    div id=frame-mangiati
-        div id=label-mangiati-bianchi class=label-mangiatiMangiati dal Bianco div
-        div id=label-mangiati-neri class=label-mangiatiMangiati dal Nero div
-    div
+    if (subisceScacco(griglia, turno)) {
+      // mossa illegale: annulla
+      griglia[rP][cP] = pezzoSel;
+      griglia[rA][cA] = destSalvato;
+      return false;
+    }
 
-    script
-         Costanti di gioco
-        const DIMENSIONE = 600;
-        const RIGHE = 8;
-        const COLONNE = 8;
-        const DIM_CASELLA = DIMENSIONE  COLONNE;
+    pezzoSel.hasMoved = true;
+    if (cattura) {
+      if (turno === 'B') mangiatiDalBianco.push(destSalvato);
+      else mangiatiDalNero.push(destSalvato);
+      aggiornaMangiati();
+    }
 
-        const LEGNO_CHIARO = #F0D9B5;
-        const LEGNO_SCURO = #B58863;
-        const COLORE_BIANCO_PEZZO = #2C2C2C;
-        const COLORE_NERO_PEZZO = #000000;
-        const EVIDENZIA_SELEZIONE = #FF3333;
+    numeroMossa++;
 
-        const UNICODE_PEZZI = {
-            'BR' '♔', 'BQ' '♕', 'BT' '♖', 'BA' '♗', 'BC' '♘', 'BP' '♙',
-            'NR' '♚', 'NQ' '♛', 'NT' '♜', 'NA' '♝', 'NC' '♞', 'NP' '♟'
-        };
+    const finalizza = () => {
+      const nota = calcolaNotazione(pezzoSel, rP, cP, rA, cA, cattura, null);
+      aggiungiMossaStoria(nota);
+      selezione = null; mosseValidePerSel = [];
+      disegna();
+      passaTurno();
+    };
 
-        const VALORI_PEZZI = {'P' 1, 'C' 3, 'A' 3, 'T' 5, 'Q' 9, 'R' 0};
+    // Promozione pedone
+    if (pezzoSel.tipo === 'P' && (rA === 0 || rA === 7)) {
+      disegna();
+      mostraSceltaPromozione(pezzoSel, (tipoScelto) => {
+        eseguiPromozione(pezzoSel, tipoScelto);
+        finalizza();
+      });
+    } else {
+      finalizza();
+    }
 
-         Classi dei pezzi
-        class Pezzo {
-            constructor(colore, tipo) {
-                this.colore = colore;
-                this.tipo = tipo;
-                this.simbolo = UNICODE_PEZZI[`${colore}${tipo}`];
-                this.has_moved = false;
-            }
+    return true;
+  }
 
-            ottieniColoreGrafico(isSelected) {
-                if (isSelected) return EVIDENZIA_SELEZIONE;
-                return this.colore === 'B'  COLORE_BIANCO_PEZZO  COLORE_NERO_PEZZO;
-            }
+  // ---------- Input ----------
+  function coordDaEvento(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    return { x, y, c: Math.floor(x / CASELLA), r: Math.floor(y / CASELLA) };
+  }
 
-            coloreDestinazioneOk(r_a, c_a, griglia) {
-                let pezzo = griglia[r_a][c_a];
-                return pezzo === null  pezzo.colore !== this.colore;
-            }
+  canvas.addEventListener('mousedown', (e) => {
+    if (gioFinito) return;
+    const { x, y, r, c } = coordDaEvento(e);
+    if (r < 0 || r >= RIGHE || c < 0 || c >= COLONNE) return;
+    const pezzo = griglia[r][c];
 
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return false;
-            }
+    if (selezione && mosseValidePerSel.some(([mr, mc]) => mr === r && mc === c)) {
+      provaMossa(selezione[0], selezione[1], r, c);
+      return;
+    }
 
-            controlloLineaDritta(r_p, c_p, r_a, c_a, griglia) {
-                if (r_p !== r_a && c_p !== c_a) return false;
-                let step_r = r_p === r_a  0  (r_a  r_p  1  -1);
-                let step_c = c_p === c_a  0  (c_a  c_p  1  -1);
-                let curr_r = r_p + step_r;
-                let curr_c = c_p + step_c;
-                while (curr_r !== r_a  curr_c !== c_a) {
-                    if (griglia[curr_r][curr_c] !== null) return false;
-                    curr_r += step_r;
-                    curr_c += step_c;
-                }
-                return true;
-            }
+    if (pezzo && pezzo.colore === turno) {
+      selezione = [r, c];
+      mosseValidePerSel = mosseLegaliPer(r, c);
+      trascinamento = { r, c, pezzo, mouseX: x, mouseY: y };
+      disegna();
+    } else {
+      selezione = null; mosseValidePerSel = [];
+      disegna();
+    }
+  });
 
-            controlloDiagonale(r_p, c_p, r_a, c_a, griglia) {
-                if (Math.abs(r_a - r_p) !== Math.abs(c_a - c_p)) return false;
-                let step_r = r_a  r_p  1  -1;
-                let step_c = c_a  c_p  1  -1;
-                let curr_r = r_p + step_r;
-                let curr_c = c_p + step_c;
-                while (curr_r !== r_a && curr_c !== c_a) {
-                    if (griglia[curr_r][curr_c] !== null) return false;
-                    curr_r += step_r;
-                    curr_c += step_c;
-                }
-                return true;
-            }
-        }
+  canvas.addEventListener('mousemove', (e) => {
+    if (!trascinamento) return;
+    const { x, y } = coordDaEvento(e);
+    trascinamento.mouseX = x;
+    trascinamento.mouseY = y;
+    disegna();
+  });
 
-        class Pedone extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                if (!this.coloreDestinazioneOk(r_a, c_a, griglia)) return false;
-                let direzione = this.colore === 'B'  -1  1;
-                let rigaIniziale = this.colore === 'B'  6  1;
-                let pezzoArrivo = griglia[r_a][c_a];
+  canvas.addEventListener('mouseup', (e) => {
+    if (!trascinamento) return;
+    const { r, c } = coordDaEvento(e);
+    const origine = trascinamento;
+    trascinamento = null;
+    if (r >= 0 && r < RIGHE && c >= 0 && c < COLONNE && (r !== origine.r || c !== origine.c)) {
+      const mosseOk = mosseValidePerSel.some(([mr, mc]) => mr === r && mc === c);
+      if (mosseOk) {
+        provaMossa(origine.r, origine.c, r, c);
+        return;
+      }
+    }
+    disegna();
+  });
 
-                if (c_p === c_a && r_a === r_p + direzione && pezzoArrivo === null) return true;
-                if (c_p === c_a && r_p === rigaIniziale && r_a === r_p + 2  direzione) {
-                    if (griglia[r_p + direzione][c_p] === null && pezzoArrivo === null) return true;
-                }
-                if (Math.abs(c_a - c_p) === 1 && r_a === r_p + direzione && pezzoArrivo !== null) return true;
-                return false;
-            }
-        }
+  canvas.addEventListener('mouseleave', () => {
+    if (trascinamento) {
+      trascinamento = null;
+      disegna();
+    }
+  });
 
-        class Torre extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return this.coloreDestinazioneOk(r_a, c_a, griglia) && this.controlloLineaDritta(r_p, c_p, r_a, c_a, griglia);
-            }
-        }
+  document.getElementById('btn-nuova').addEventListener('click', () => {
+    griglia = nuovaGriglia();
+    turno = 'B';
+    selezione = null;
+    mosseValidePerSel = [];
+    numeroMossa = 0;
+    storiaMosse = [];
+    mangiatiDalBianco = [];
+    mangiatiDalNero = [];
+    trascinamento = null;
+    gioFinito = false;
+    aggiornaTestoTurno();
+    aggiornaMomentum();
+    aggiornaMangiati();
+    renderStoria();
+    disegna();
+  });
 
-        class Alfiere extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return this.coloreDestinazioneOk(r_a, c_a, griglia) && this.controlloDiagonale(r_p, c_p, r_a, c_a, griglia);
-            }
-        }
+  document.getElementById('btn-cronologia').addEventListener('click', () => {
+    document.getElementById('lista-mosse').scrollTop = 0;
+  });
 
-        class Cavallo extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return this.coloreDestinazioneOk(r_a, c_a, griglia) && (
-                    (Math.abs(r_a - r_p) === 2 && Math.abs(c_a - c_p) === 1) 
-                    (Math.abs(r_a - r_p) === 1 && Math.abs(c_a - c_p) === 2)
-                );
-            }
-        }
-
-        class Regina extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return this.coloreDestinazioneOk(r_a, c_a, griglia) && (
-                    this.controlloLineaDritta(r_p, c_p, r_a, c_a, griglia) 
-                    this.controlloDiagonale(r_p, c_p, r_a, c_a, griglia)
-                );
-            }
-        }
-
-        class Re extends Pezzo {
-            mossaValida(r_p, c_p, r_a, c_a, griglia) {
-                return this.coloreDestinazioneOk(r_a, c_a, griglia) &&
-                       Math.abs(r_a - r_p) = 1 && Math.abs(c_a - c_p) = 1 &&
-                       (r_a !== r_p  c_a !== c_p);
-            }
-        }
-
-        class Scacchiera {
-            constructor() {
-                this.griglia = Array(RIGHE).fill(null).map(() = Array(COLONNE).fill(null));
-                this.inizializzaPezzi();
-            }
-
-            inizializzaPezzi() {
-                for (let col = 0; col  COLONNE; col++) {
-                    this.griglia[1][col] = new Pedone('N', 'P');
-                    this.griglia[6][col] = new Pedone('B', 'P');
-                }
-                this.griglia[0][0] = new Torre('N', 'T');
-                this.griglia[0][1] = new Cavallo('N', 'C');
-                this.griglia[0][2] = new Alfiere('N', 'A');
-                this.griglia[0][3] = new Regina('N', 'Q');
-                this.griglia[0][4] = new Re('N', 'R');
-                this.griglia[0][5] = new Alfiere('N', 'A');
-                this.griglia[0][6] = new Cavallo('N', 'C');
-                this.griglia[0][7] = new Torre('N', 'T');
-
-                this.griglia[7][0] = new Torre('B', 'T');
-                this.griglia[7][1] = new Cavallo('B', 'C');
-                this.griglia[7][2] = new Alfiere('B', 'A');
-                this.griglia[7][3] = new Regina('B', 'Q');
-                this.griglia[7][4] = new Re('B', 'R');
-                this.griglia[7][5] = new Alfiere('B', 'A');
-                this.griglia[7][6] = new Cavallo('B', 'C');
-                this.griglia[7][7] = new Torre('B', 'T');
-            }
-
-            trovaRe(colore) {
-                for (let r = 0; r  RIGHE; r++) {
-                    for (let c = 0; c  COLONNE; c++) {
-                        let p = this.griglia[r][c];
-                        if (p !== null && p.tipo === 'R' && p.colore === colore) {
-                            return [r, c];
-                        }
-                    }
-                }
-                return null;
-            }
-
-            subisceScacco(colore) {
-                let posRe = this.trovaRe(colore);
+  // ---------- Avvio ----------
+  aggiornaTestoTurno();
+  aggiornaMomentum();
+  aggiornaMangiati();
+  renderStoria();
+  disegna();
+})();
+</script>
+</body>
+</html>
