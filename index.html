@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scacchi — Edizione Legno</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <style>
   :root {
     --legno-chiaro: #F0D9B5;
@@ -12,6 +13,7 @@
     --pannello: #3c322c;
     --testo: #eee3d3;
     --accento: #d97757;
+    --verde: #6fae5c;
     --evidenzia: #ff3333;
     --mossa-possibile: rgba(60, 160, 60, 0.55);
   }
@@ -32,7 +34,6 @@
     letter-spacing: 0.08em;
     font-size: 1.6rem;
     margin: 0 0 4px;
-    color: var(--testo);
   }
   .sottotitolo {
     font-size: 0.85rem;
@@ -53,11 +54,7 @@
     flex-direction: column;
     align-items: center;
   }
-  .controlli {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
+  .controlli { display: flex; gap: 10px; margin-bottom: 14px; }
   button {
     font-family: inherit;
     background: var(--pannello);
@@ -70,78 +67,40 @@
     letter-spacing: 0.03em;
     transition: background 0.15s, border-color 0.15s;
   }
-  button:hover {
-    background: #4a3e35;
-    border-color: var(--accento);
-  }
+  button:hover { background: #4a3e35; border-color: var(--accento); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
   #turno {
     font-size: 1rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     margin-bottom: 10px;
     min-height: 1.2em;
+    text-align: center;
   }
   #turno.scacco { color: var(--evidenzia); font-weight: bold; }
+  #wrap-canvas { position: relative; }
   canvas#scacchiera {
     border: 6px solid #23180f;
     border-radius: 2px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.55);
     touch-action: none;
   }
-  .momentum-wrap {
-    width: 100%;
-    max-width: 600px;
-    margin-top: 16px;
-  }
-  .momentum-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    margin-bottom: 4px;
-    color: #cbbfae;
-  }
-  #barra-momentum {
-    display: flex;
-    height: 18px;
-    border-radius: 3px;
-    overflow: hidden;
-    border: 1px solid #5a4c40;
-  }
+  .momentum-wrap { width: 100%; max-width: 600px; margin-top: 16px; }
+  .momentum-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; color: #cbbfae; }
+  #barra-momentum { display: flex; height: 18px; border-radius: 3px; overflow: hidden; border: 1px solid #5a4c40; }
   #seg-bianco { background: var(--legno-chiaro); transition: width 0.3s; }
   #seg-nero { background: var(--legno-scuro); transition: width 0.3s; }
 
-  .mangiati {
-    display: flex;
-    gap: 24px;
-    margin-top: 16px;
-    font-size: 1.1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .mangiati-blocco {
-    background: var(--pannello);
-    border: 1px solid #5a4c40;
-    border-radius: 6px;
-    padding: 8px 14px;
-    min-width: 180px;
-    text-align: center;
-  }
-  .mangiati-blocco .titolo {
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accento);
-    display: block;
-    margin-bottom: 4px;
-  }
+  .mangiati { display: flex; gap: 24px; margin-top: 16px; font-size: 1.1rem; flex-wrap: wrap; justify-content: center; }
+  .mangiati-blocco { background: var(--pannello); border: 1px solid #5a4c40; border-radius: 6px; padding: 8px 14px; min-width: 180px; text-align: center; }
+  .mangiati-blocco .titolo { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accento); display: block; margin-bottom: 4px; }
 
   .pannello-laterale {
-    width: 220px;
+    width: 230px;
     background: var(--pannello);
     border: 1px solid #5a4c40;
     border-radius: 6px;
     padding: 14px;
-    max-height: 620px;
     display: flex;
     flex-direction: column;
   }
@@ -155,43 +114,42 @@
     border-bottom: 1px solid #5a4c40;
     padding-bottom: 8px;
   }
-  #lista-mosse {
-    overflow-y: auto;
-    flex: 1;
-    font-size: 0.85rem;
-    line-height: 1.7;
-  }
-  .riga-mossa {
-    display: flex;
-    gap: 8px;
-  }
+  #lista-mosse { overflow-y: auto; max-height: 300px; flex: 1; font-size: 0.85rem; line-height: 1.7; }
+  .riga-mossa { display: flex; gap: 8px; }
   .riga-mossa .num { color: #8a7a68; width: 22px; }
   .riga-mossa .b, .riga-mossa .n { flex: 1; }
 
-  .promozione-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
+  .pannello-mp p { font-size: 0.8rem; line-height: 1.5; color: #cbbfae; margin: 6px 0; }
+  .pannello-mp input {
+    width: 100%;
+    font-family: inherit;
+    background: #241d18;
+    color: var(--testo);
+    border: 1px solid #5a4c40;
+    border-radius: 4px;
+    padding: 7px 8px;
+    font-size: 0.78rem;
+    margin-bottom: 8px;
   }
+  .pannello-mp .riga-btn { display: flex; gap: 6px; margin-bottom: 4px; }
+  .pannello-mp .riga-btn button { flex: 1; }
+  .separatore { text-align: center; font-size: 0.7rem; color: #8a7a68; text-transform: uppercase; letter-spacing: 0.1em; margin: 10px 0; }
+  #mp-stato-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #4a3e35;
+    margin-bottom: 10px;
+    letter-spacing: 0.03em;
+  }
+  #mp-stato-badge.connesso { background: var(--verde); color: #142310; }
+  #mp-stato-badge.attesa { background: var(--accento); color: #2a160c; }
+
+  .promozione-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10; }
   .promozione-overlay.attivo { display: flex; }
-  .promozione-box {
-    background: var(--pannello);
-    border: 1px solid var(--accento);
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    gap: 12px;
-  }
-  .promozione-box button {
-    font-size: 2rem;
-    padding: 10px 16px;
-    background: var(--legno-chiaro);
-    color: #222;
-  }
+  .promozione-box { background: var(--pannello); border: 1px solid var(--accento); border-radius: 8px; padding: 20px; display: flex; gap: 12px; }
+  .promozione-box button { font-size: 2rem; padding: 10px 16px; background: var(--legno-chiaro); color: #222; }
   .promozione-box button:hover { background: var(--accento); color: #fff; }
 </style>
 </head>
@@ -201,13 +159,35 @@
 <div class="sottotitolo">Edizione Legno</div>
 
 <div class="layout">
+
+  <div class="pannello-laterale pannello-mp">
+    <h2>Gioca con un amico</h2>
+    <span id="mp-stato-badge">Modalità locale</span>
+    <p id="mp-descrizione">Crea una stanza e manda il link al tuo amico: lui vedrà la scacchiera dal suo lato.</p>
+    <div class="riga-btn">
+      <button id="btn-crea-stanza">🎲 Crea stanza</button>
+    </div>
+    <div id="link-stanza-wrap" style="display:none">
+      <input id="link-stanza" readonly>
+      <div class="riga-btn">
+        <button id="btn-copia-link">📋 Copia link</button>
+      </div>
+    </div>
+    <div class="separatore">oppure</div>
+    <input id="input-codice" placeholder="Incolla qui il link ricevuto">
+    <div class="riga-btn">
+      <button id="btn-unisciti">➡️ Unisciti</button>
+    </div>
+  </div>
+
   <div class="colonna-centrale">
     <div class="controlli">
       <button id="btn-nuova">🔄 Nuova Partita</button>
-      <button id="btn-cronologia">📜 Vai a inizio</button>
     </div>
     <div id="turno">Turno: Bianco</div>
-    <canvas id="scacchiera" width="600" height="600"></canvas>
+    <div id="wrap-canvas">
+      <canvas id="scacchiera" width="600" height="600"></canvas>
+    </div>
 
     <div class="momentum-wrap">
       <div class="momentum-label">
@@ -236,6 +216,7 @@
     <h2>Cronologia mosse</h2>
     <div id="lista-mosse"></div>
   </div>
+
 </div>
 
 <div class="promozione-overlay" id="overlay-promozione">
@@ -256,12 +237,13 @@
   };
   const VALORI = { P: 1, C: 3, A: 3, T: 5, Q: 9, R: 0 };
   const NOMI_ITA = { P: 'Pedone', C: 'Cavallo', A: 'Alfiere', T: 'Torre', Q: 'Regina', R: 'Re' };
+  const COLONNE_LETTERE = 'abcdefgh';
 
   // ---------- Pezzo ----------
   class Pezzo {
     constructor(colore, tipo) {
-      this.colore = colore; // 'B' | 'N'
-      this.tipo = tipo;     // 'P','T','A','C','Q','R'
+      this.colore = colore;
+      this.tipo = tipo;
       this.simbolo = UNICODE[colore + tipo];
       this.hasMoved = false;
     }
@@ -339,6 +321,9 @@
     }
   }
 
+  function classeDiTipo(t) {
+    return { T: Torre, C: Cavallo, A: Alfiere, Q: Regina, R: Re }[t];
+  }
   function nuovaGriglia() {
     const g = Array.from({ length: RIGHE }, () => Array(COLONNE).fill(null));
     for (let col = 0; col < COLONNE; col++) {
@@ -351,9 +336,6 @@
       g[7][col] = new (classeDiTipo(ordine[col]))('B', ordine[col]);
     }
     return g;
-  }
-  function classeDiTipo(t) {
-    return { T: Torre, C: Cavallo, A: Alfiere, Q: Regina, R: Re }[t];
   }
 
   function trovaRe(griglia, colore) {
@@ -389,17 +371,34 @@
   // ---------- Stato di gioco ----------
   let griglia = nuovaGriglia();
   let turno = 'B';
-  let selezione = null;      // [r,c]
-  let mosseValidePerSel = []; // lista di [r,c]
+  let selezione = null;
+  let mosseValidePerSel = [];
   let numeroMossa = 0;
-  let storiaMosse = [];      // { numero, notazione, turno }
+  let storiaMosse = [];
   let mangiatiDalBianco = [];
   let mangiatiDalNero = [];
-  let trascinamento = null;  // { r,c, pezzo, mouseX, mouseY }
+  let trascinamento = null;
   let gioFinito = false;
+
+  // ---------- Stato multiplayer ----------
+  let peer = null;
+  let conn = null;
+  let multiplayerAttivo = false;
+  let ruoloLocale = null;   // 'B' | 'N' -> colore assegnato al giocatore su QUESTO dispositivo
+  let prospettiva = 'B';    // da che lato viene disegnata la scacchiera
 
   const canvas = document.getElementById('scacchiera');
   const ctx = canvas.getContext('2d');
+
+  // Mappa coordinate logiche <-> coordinate su schermo, in base alla prospettiva
+  function aSchermo(r, c) {
+    if (prospettiva === 'N') return [RIGHE - 1 - r, COLONNE - 1 - c];
+    return [r, c];
+  }
+  function daSchermo(r, c) {
+    if (prospettiva === 'N') return [RIGHE - 1 - r, COLONNE - 1 - c];
+    return [r, c];
+  }
 
   function coloreDestGraph(pezzo, selezionato) {
     if (selezionato) return EVIDENZIA;
@@ -409,34 +408,32 @@
   function disegna() {
     for (let r = 0; r < RIGHE; r++) {
       for (let c = 0; c < COLONNE; c++) {
+        const [sr, sc] = aSchermo(r, c);
         const chiaro = (r + c) % 2 === 0;
         ctx.fillStyle = chiaro ? LEGNO_CHIARO : LEGNO_SCURO;
-        ctx.fillRect(c * CASELLA, r * CASELLA, CASELLA, CASELLA);
+        ctx.fillRect(sc * CASELLA, sr * CASELLA, CASELLA, CASELLA);
       }
     }
-    // evidenzia selezione
     if (selezione) {
-      const [sr, sc] = selezione;
+      const [sr, sc] = aSchermo(selezione[0], selezione[1]);
       ctx.fillStyle = "rgba(255,51,51,0.35)";
       ctx.fillRect(sc * CASELLA, sr * CASELLA, CASELLA, CASELLA);
     }
-    // mosse possibili
     mosseValidePerSel.forEach(([r, c]) => {
+      const [sr, sc] = aSchermo(r, c);
       ctx.beginPath();
       ctx.fillStyle = MOSSA_POSSIBILE;
-      ctx.arc(c * CASELLA + CASELLA / 2, r * CASELLA + CASELLA / 2, CASELLA * 0.14, 0, Math.PI * 2);
+      ctx.arc(sc * CASELLA + CASELLA / 2, sr * CASELLA + CASELLA / 2, CASELLA * 0.14, 0, Math.PI * 2);
       ctx.fill();
     });
-    // re sotto scacco
     if (!gioFinito) {
       const posRe = trovaRe(griglia, turno);
       if (posRe && subisceScacco(griglia, turno)) {
-        const [rr, rc] = posRe;
+        const [sr, sc] = aSchermo(posRe[0], posRe[1]);
         ctx.fillStyle = "rgba(255,0,0,0.35)";
-        ctx.fillRect(rc * CASELLA, rr * CASELLA, CASELLA, CASELLA);
+        ctx.fillRect(sc * CASELLA, sr * CASELLA, CASELLA, CASELLA);
       }
     }
-    // pezzi
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = `${CASELLA * 0.72}px serif`;
@@ -445,25 +442,43 @@
         if (trascinamento && trascinamento.r === r && trascinamento.c === c) continue;
         const p = griglia[r][c];
         if (p) {
+          const [sr, sc] = aSchermo(r, c);
           const sel = selezione && selezione[0] === r && selezione[1] === c;
           ctx.fillStyle = coloreDestGraph(p, sel);
-          ctx.fillText(p.simbolo, c * CASELLA + CASELLA / 2, r * CASELLA + CASELLA / 2 + 2);
+          ctx.fillText(p.simbolo, sc * CASELLA + CASELLA / 2, sr * CASELLA + CASELLA / 2 + 2);
         }
       }
     }
-    // pezzo trascinato sopra tutto, sotto il mouse
     if (trascinamento) {
       ctx.fillStyle = coloreDestGraph(trascinamento.pezzo, true);
       ctx.fillText(trascinamento.pezzo.simbolo, trascinamento.mouseX, trascinamento.mouseY);
     }
+    // coordinate ai bordi
+    ctx.font = "11px sans-serif";
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    for (let c = 0; c < COLONNE; c++) {
+      const [, sc] = aSchermo(0, c);
+      const lettera = prospettiva === 'N' ? COLONNE_LETTERE[COLONNE - 1 - c] : COLONNE_LETTERE[c];
+      ctx.fillText(lettera, sc * CASELLA + CASELLA - 8, DIM - 6);
+    }
+    for (let r = 0; r < RIGHE; r++) {
+      const [sr] = aSchermo(r, 0);
+      const numero = prospettiva === 'N' ? (r + 1) : (RIGHE - r);
+      ctx.fillText(numero, 8, sr * CASELLA + 12);
+    }
+  }
+
+  function nomeGiocatore(colore) {
+    if (!multiplayerAttivo) return colore === 'B' ? 'Bianco' : 'Nero';
+    const tu = colore === ruoloLocale;
+    return `${colore === 'B' ? 'Bianco' : 'Nero'}${tu ? ' (Tu)' : ' (Avversario)'}`;
   }
 
   function aggiornaTestoTurno() {
     const el = document.getElementById('turno');
     if (gioFinito) return;
-    const nomeColore = turno === 'B' ? 'Bianco' : 'Nero';
     const scacco = subisceScacco(griglia, turno);
-    el.textContent = scacco ? `Turno: ${nomeColore} — SOTTO SCACCO!` : `Turno: ${nomeColore}`;
+    el.textContent = scacco ? `Turno: ${nomeGiocatore(turno)} — SOTTO SCACCO!` : `Turno: ${nomeGiocatore(turno)}`;
     el.classList.toggle('scacco', scacco);
   }
 
@@ -494,7 +509,7 @@
   }
 
   function calcolaNotazione(pezzo, rP, cP, rA, cA, cattura, arrocco) {
-    const colonne = 'abcdefgh', righe = '87654321';
+    const righe = '87654321';
     if (arrocco === 'corto') return 'O-O';
     if (arrocco === 'lungo') return 'O-O-O';
     let lettera = '';
@@ -503,9 +518,9 @@
     else if (pezzo.tipo === 'T') lettera = 'T';
     else if (pezzo.tipo === 'A') lettera = 'A';
     else if (pezzo.tipo === 'C') lettera = 'C';
-    if (pezzo.tipo === 'P' && cattura) lettera = colonne[cP];
+    if (pezzo.tipo === 'P' && cattura) lettera = COLONNE_LETTERE[cP];
     const sep = cattura ? 'x' : '';
-    return `${lettera}${sep}${colonne[cA]}${righe[rA]}`;
+    return `${lettera}${sep}${COLONNE_LETTERE[cA]}${righe[rA]}`;
   }
 
   function aggiungiMossaStoria(notazione) {
@@ -518,12 +533,12 @@
     let coppie = [];
     storiaMosse.forEach(m => {
       if (m.turno === 'B') {
-        coppie.push({ num: m.numero, b: m.notazione, n: '' });
+        coppie.push({ b: m.notazione, n: '' });
       } else {
         if (coppie.length && coppie[coppie.length - 1].n === '') {
           coppie[coppie.length - 1].n = m.notazione;
         } else {
-          coppie.push({ num: m.numero, b: '', n: m.notazione });
+          coppie.push({ b: '', n: m.notazione });
         }
       }
     });
@@ -536,7 +551,6 @@
     cont.scrollTop = cont.scrollHeight;
   }
 
-  // ---------- Arrocco ----------
   function tentaArrocco(rP, cP, rA, cA) {
     const pezzo = griglia[rP][cP];
     if (!pezzo || pezzo.tipo !== 'R' || pezzo.hasMoved) return [false, null];
@@ -577,10 +591,7 @@
     for (let r = 0; r < RIGHE; r++)
       for (let c = 0; c < COLONNE; c++) {
         const p = griglia[r][c];
-        if (p && p.colore === colore) {
-          const dest = mosseLegaliPer(r, c);
-          if (dest.length > 0) return true;
-        }
+        if (p && p.colore === colore && mosseLegaliPer(r, c).length > 0) return true;
       }
     return false;
   }
@@ -589,7 +600,6 @@
     if (!esistonoMossePerColore(turno)) {
       gioFinito = true;
       const scacco = subisceScacco(griglia, turno);
-      const nomeColore = turno === 'B' ? 'Bianco' : 'Nero';
       const el = document.getElementById('turno');
       if (scacco) {
         const vincitore = turno === 'B' ? 'Nero' : 'Bianco';
@@ -601,7 +611,6 @@
     }
   }
 
-  // Ritorna la lista di mosse pseudo-legali (senza lasciare il proprio re sotto scacco) per il pezzo in r,c
   function mosseLegaliPer(r, c) {
     const pezzo = griglia[r][c];
     if (!pezzo) return [];
@@ -610,15 +619,15 @@
       for (let cA = 0; cA < COLONNE; cA++) {
         if (rA === r && cA === c) continue;
         let valida = false;
+        let isArrocco = false;
         if (pezzo.tipo === 'R' && rA === r && Math.abs(cA - c) === 2) {
-          // simulazione arrocco: verifichiamo condizioni senza eseguirlo davvero
+          isArrocco = true;
           valida = puoArroccareVerso(r, c, rA, cA);
         } else if (pezzo.mossaValida(r, c, rA, cA, griglia)) {
           valida = true;
         }
-        if (valida && !lascerebeSottoScaccoSimulato(pezzo.tipo === 'R' && Math.abs(cA - c) === 2, r, c, rA, cA)) {
-          risultati.push([rA, cA]);
-        }
+        if (valida && !(isArrocco) && lascerebeSottoScaccoSimulato(r, c, rA, cA)) valida = false;
+        if (valida) risultati.push([rA, cA]);
       }
     }
     return risultati;
@@ -644,8 +653,7 @@
     return true;
   }
 
-  function lascerebeSottoScaccoSimulato(isArrocco, rP, cP, rA, cA) {
-    if (isArrocco) return false; // già verificato dentro puoArroccareVerso
+  function lascerebeSottoScaccoSimulato(rP, cP, rA, cA) {
     const pezzo = griglia[rP][cP];
     const salvato = griglia[rA][cA];
     griglia[rA][cA] = pezzo;
@@ -660,7 +668,6 @@
     pezzo.tipo = tipoScelto;
     pezzo.simbolo = UNICODE[pezzo.colore + tipoScelto];
   }
-
   function mostraSceltaPromozione(pezzo, callback) {
     const overlay = document.getElementById('overlay-promozione');
     const box = document.getElementById('box-promozione');
@@ -669,21 +676,30 @@
       const btn = document.createElement('button');
       btn.textContent = UNICODE[pezzo.colore + tipo];
       btn.title = NOMI_ITA[tipo];
-      btn.onclick = () => {
-        overlay.classList.remove('attivo');
-        callback(tipo);
-      };
+      btn.onclick = () => { overlay.classList.remove('attivo'); callback(tipo); };
       box.appendChild(btn);
     });
     overlay.classList.add('attivo');
   }
 
-  function provaMossa(rP, cP, rA, cA) {
+  // ---------- Multiplayer: invio dati ----------
+  function inviaMessaggio(msg) {
+    if (conn && conn.open) conn.send(msg);
+  }
+  function broadcastMossa(rP, cP, rA, cA, promozione) {
+    if (multiplayerAttivo) inviaMessaggio({ tipo: 'mossa', rP, cP, rA, cA, promozione });
+  }
+  function broadcastNuovaPartita() {
+    if (multiplayerAttivo) inviaMessaggio({ tipo: 'nuova_partita' });
+  }
+
+  // rimoto = true quando la mossa arriva dall'avversario (non ribroadcastare)
+  function provaMossa(rP, cP, rA, cA, remoto, promozioneForzata) {
     if (gioFinito) return false;
     const pezzoSel = griglia[rP][cP];
     if (!pezzoSel || pezzoSel.colore !== turno) return false;
+    if (!remoto && multiplayerAttivo && ruoloLocale !== turno) return false;
 
-    // Arrocco
     if (pezzoSel.tipo === 'R' && rA === rP && Math.abs(cA - cP) === 2) {
       const [ok, tipoArrocco] = tentaArrocco(rP, cP, rA, cA);
       if (ok) {
@@ -692,6 +708,7 @@
         aggiungiMossaStoria(nota);
         selezione = null; mosseValidePerSel = [];
         disegna();
+        if (!remoto) broadcastMossa(rP, cP, rA, cA, null);
         passaTurno();
         return true;
       }
@@ -707,7 +724,6 @@
     griglia[rP][cP] = null;
 
     if (subisceScacco(griglia, turno)) {
-      // mossa illegale: annulla
       griglia[rP][cP] = pezzoSel;
       griglia[rA][cA] = destSalvato;
       return false;
@@ -719,28 +735,31 @@
       else mangiatiDalNero.push(destSalvato);
       aggiornaMangiati();
     }
-
     numeroMossa++;
 
-    const finalizza = () => {
+    const finalizza = (tipoPromoInviato) => {
       const nota = calcolaNotazione(pezzoSel, rP, cP, rA, cA, cattura, null);
       aggiungiMossaStoria(nota);
       selezione = null; mosseValidePerSel = [];
       disegna();
+      if (!remoto) broadcastMossa(rP, cP, rA, cA, tipoPromoInviato || null);
       passaTurno();
     };
 
-    // Promozione pedone
     if (pezzoSel.tipo === 'P' && (rA === 0 || rA === 7)) {
-      disegna();
-      mostraSceltaPromozione(pezzoSel, (tipoScelto) => {
-        eseguiPromozione(pezzoSel, tipoScelto);
-        finalizza();
-      });
+      if (remoto) {
+        eseguiPromozione(pezzoSel, promozioneForzata || 'Q');
+        finalizza(null);
+      } else {
+        disegna();
+        mostraSceltaPromozione(pezzoSel, (tipoScelto) => {
+          eseguiPromozione(pezzoSel, tipoScelto);
+          finalizza(tipoScelto);
+        });
+      }
     } else {
-      finalizza();
+      finalizza(null);
     }
-
     return true;
   }
 
@@ -751,21 +770,24 @@
     const scaleY = canvas.height / rect.height;
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
-    return { x, y, c: Math.floor(x / CASELLA), r: Math.floor(y / CASELLA) };
+    const scRaw = Math.floor(x / CASELLA), rRaw = Math.floor(y / CASELLA);
+    const [r, c] = daSchermo(rRaw, scRaw);
+    return { x, y, r, c };
   }
 
   canvas.addEventListener('mousedown', (e) => {
     if (gioFinito) return;
     const { x, y, r, c } = coordDaEvento(e);
     if (r < 0 || r >= RIGHE || c < 0 || c >= COLONNE) return;
+    if (multiplayerAttivo && ruoloLocale !== turno) return;
     const pezzo = griglia[r][c];
 
     if (selezione && mosseValidePerSel.some(([mr, mc]) => mr === r && mc === c)) {
-      provaMossa(selezione[0], selezione[1], r, c);
+      provaMossa(selezione[0], selezione[1], r, c, false);
       return;
     }
 
-    if (pezzo && pezzo.colore === turno) {
+    if (pezzo && pezzo.colore === turno && (!multiplayerAttivo || pezzo.colore === ruoloLocale)) {
       selezione = [r, c];
       mosseValidePerSel = mosseLegaliPer(r, c);
       trascinamento = { r, c, pezzo, mouseX: x, mouseY: y };
@@ -791,22 +813,16 @@
     trascinamento = null;
     if (r >= 0 && r < RIGHE && c >= 0 && c < COLONNE && (r !== origine.r || c !== origine.c)) {
       const mosseOk = mosseValidePerSel.some(([mr, mc]) => mr === r && mc === c);
-      if (mosseOk) {
-        provaMossa(origine.r, origine.c, r, c);
-        return;
-      }
+      if (mosseOk) { provaMossa(origine.r, origine.c, r, c, false); return; }
     }
     disegna();
   });
 
   canvas.addEventListener('mouseleave', () => {
-    if (trascinamento) {
-      trascinamento = null;
-      disegna();
-    }
+    if (trascinamento) { trascinamento = null; disegna(); }
   });
 
-  document.getElementById('btn-nuova').addEventListener('click', () => {
+  function resetPartitaLocale() {
     griglia = nuovaGriglia();
     turno = 'B';
     selezione = null;
@@ -822,11 +838,133 @@
     aggiornaMangiati();
     renderStoria();
     disegna();
+  }
+
+  document.getElementById('btn-nuova').addEventListener('click', () => {
+    resetPartitaLocale();
+    broadcastNuovaPartita();
   });
 
-  document.getElementById('btn-cronologia').addEventListener('click', () => {
-    document.getElementById('lista-mosse').scrollTop = 0;
+  // =====================================================================
+  // MULTIPLAYER (PeerJS - connessione diretta browser-browser)
+  // =====================================================================
+  const badge = document.getElementById('mp-stato-badge');
+  const descrizione = document.getElementById('mp-descrizione');
+  const btnCrea = document.getElementById('btn-crea-stanza');
+  const btnUnisciti = document.getElementById('btn-unisciti');
+  const inputCodice = document.getElementById('input-codice');
+  const linkWrap = document.getElementById('link-stanza-wrap');
+  const linkInput = document.getElementById('link-stanza');
+
+  function impostaBadge(testo, classe) {
+    badge.textContent = testo;
+    badge.className = classe || '';
+  }
+
+  function estraiCodiceStanza(testo) {
+    testo = testo.trim();
+    try {
+      const url = new URL(testo);
+      const p = url.searchParams.get('stanza');
+      if (p) return p;
+    } catch (e) { /* non è un url, va bene, potrebbe essere già il codice */ }
+    return testo;
+  }
+
+  function configuraCanaleDati(connessione, coloreLocale) {
+    conn = connessione;
+    multiplayerAttivo = true;
+    ruoloLocale = coloreLocale;
+    prospettiva = coloreLocale;
+
+    conn.on('data', (msg) => {
+      if (!msg || !msg.tipo) return;
+      if (msg.tipo === 'mossa') {
+        provaMossa(msg.rP, msg.cP, msg.rA, msg.cA, true, msg.promozione);
+      }
+      if (msg.tipo === 'nuova_partita') {
+        resetPartitaLocale();
+      }
+    });
+
+    conn.on('close', () => {
+      impostaBadge('Avversario disconnesso', 'attesa');
+      multiplayerAttivo = false;
+    });
+
+    impostaBadge(`Connesso — sei il ${coloreLocale === 'B' ? 'Bianco' : 'Nero'}`, 'connesso');
+    descrizione.textContent = coloreLocale === 'B'
+      ? 'Il tuo amico è entrato nella stanza. Muovi per primo!'
+      : 'Sei entrato nella stanza. Vedi la scacchiera dal tuo lato: i tuoi pezzi sono in basso.';
+    resetPartitaLocale();
+    aggiornaTestoTurno();
+  }
+
+  btnCrea.addEventListener('click', () => {
+    const idStanza = 'scacchi-legno-' + Math.random().toString(36).slice(2, 9);
+    impostaBadge('Creazione stanza…', 'attesa');
+    peer = new Peer(idStanza);
+
+    peer.on('open', () => {
+      const link = `${location.origin}${location.pathname}?stanza=${idStanza}`;
+      linkInput.value = link;
+      linkWrap.style.display = 'block';
+      impostaBadge('In attesa dell\'avversario…', 'attesa');
+      descrizione.textContent = 'Manda questo link al tuo amico. Quando lo apre, la partita comincia: tu giochi il Bianco.';
+    });
+
+    peer.on('connection', (connessione) => {
+      connessione.on('open', () => {
+        connessione.send({ tipo: 'assegna', tuoColore: 'N' });
+        configuraCanaleDati(connessione, 'B');
+      });
+    });
+
+    peer.on('error', (err) => {
+      impostaBadge('Errore connessione', 'attesa');
+      descrizione.textContent = 'Non è stato possibile creare la stanza (' + err.type + '). Riprova.';
+    });
   });
+
+  function entraNellaStanza(idStanza) {
+    impostaBadge('Connessione in corso…', 'attesa');
+    peer = new Peer();
+    peer.on('open', () => {
+      const connessione = peer.connect(idStanza, { reliable: true });
+      connessione.on('open', () => { /* attendo assegnazione colore dall'host */ });
+      connessione.on('data', (msg) => {
+        if (msg && msg.tipo === 'assegna') {
+          configuraCanaleDati(connessione, msg.tuoColore);
+        }
+      });
+      connessione.on('error', () => {
+        impostaBadge('Stanza non trovata', 'attesa');
+        descrizione.textContent = 'Controlla il link ricevuto e riprova.';
+      });
+    });
+    peer.on('error', (err) => {
+      impostaBadge('Errore connessione', 'attesa');
+      descrizione.textContent = 'Non è stato possibile unirsi alla stanza (' + err.type + ').';
+    });
+  }
+
+  btnUnisciti.addEventListener('click', () => {
+    const codice = estraiCodiceStanza(inputCodice.value);
+    if (!codice) return;
+    entraNellaStanza(codice);
+  });
+
+  document.getElementById('btn-copia-link').addEventListener('click', () => {
+    linkInput.select();
+    navigator.clipboard && navigator.clipboard.writeText(linkInput.value);
+  });
+
+  // Unione automatica se l'URL contiene ?stanza=CODICE
+  const paramStanza = new URLSearchParams(location.search).get('stanza');
+  if (paramStanza) {
+    inputCodice.value = paramStanza;
+    entraNellaStanza(paramStanza);
+  }
 
   // ---------- Avvio ----------
   aggiornaTestoTurno();
@@ -838,4 +976,3 @@
 </script>
 </body>
 </html>
-#dale
